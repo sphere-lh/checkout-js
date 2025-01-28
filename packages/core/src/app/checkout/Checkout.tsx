@@ -7,6 +7,7 @@ import {
     Consignment,
     EmbeddedCheckoutMessenger,
     EmbeddedCheckoutMessengerOptions,
+    ExtensionRegion,
     FlashMessage,
     PaymentMethod,
     Promotion,
@@ -16,7 +17,7 @@ import { find, findIndex } from 'lodash';
 import React, { Component, lazy, ReactNode } from 'react';
 
 import { AnalyticsContextProps } from '@bigcommerce/checkout/analytics';
-import { ExtensionContextProps, withExtension } from '@bigcommerce/checkout/checkout-extension';
+import { Extension, ExtensionContextProps, withExtension } from '@bigcommerce/checkout/checkout-extension';
 import { ErrorLogger } from '@bigcommerce/checkout/error-handling-utils';
 import { TranslatedString, withLanguage, WithLanguageProps } from '@bigcommerce/checkout/locale';
 import { AddressFormSkeleton, ChecklistSkeleton } from '@bigcommerce/checkout/ui';
@@ -39,7 +40,7 @@ import { getSupportedMethodIds } from '../customer/getSupportedMethods';
 import { SubscribeSessionStorage } from '../customer/SubscribeSessionStorage';
 import { EmbeddedCheckoutStylesheet, isEmbedded } from '../embeddedCheckout';
 import { PromotionBannerList } from '../promotion';
-import { hasSelectedShippingOptions, isUsingMultiShipping, StaticConsignment } from '../shipping';
+import { hasSelectedShippingOptions, isUsingMultiShipping, ShippingSummary } from '../shipping';
 import { ShippingOptionExpiredError } from '../shipping/shippingOption';
 import { LazyContainer, LoadingNotification, LoadingOverlay } from '../ui/loading';
 import { MobileView } from '../ui/responsive';
@@ -121,7 +122,6 @@ export interface CheckoutState {
     isCartEmpty: boolean;
     isRedirecting: boolean;
     hasSelectedShippingOptions: boolean;
-    isHidingStepNumbers: boolean;
     isSubscribed: boolean;
     buttonConfigs: PaymentMethod[];
 }
@@ -138,6 +138,7 @@ export interface WithCheckoutProps {
     isPending: boolean;
     isPriceHiddenFromGuests: boolean;
     isShowingWalletButtonsOnTop: boolean;
+    isNewMultiShippingUIEnabled: boolean;
     loginUrl: string;
     cartUrl: string;
     createAccountUrl: string;
@@ -163,7 +164,6 @@ class Checkout extends Component<
         isRedirecting: false,
         isMultiShippingMode: false,
         hasSelectedShippingOptions: false,
-        isHidingStepNumbers: true,
         isSubscribed: false,
         buttonConfigs: [],
     };
@@ -254,9 +254,6 @@ class Checkout extends Component<
                 data.getConfig()?.checkoutSettings.hasMultiShippingEnabled;
             const checkoutBillingSameAsShippingEnabled =
                 data.getConfig()?.checkoutSettings.checkoutBillingSameAsShippingEnabled ?? true;
-            const removeStepNumbersFlag =
-              data.getConfig()?.checkoutSettings.features['CHECKOUT-7255.remove_checkout_step_numbers'] ??
-              false;
             const defaultNewsletterSignupOption =
                 data.getConfig()?.shopperConfig.defaultNewsletterSignup ??
                 false;
@@ -268,7 +265,6 @@ class Checkout extends Component<
 
             this.setState({
                 isBillingSameAsShipping: checkoutBillingSameAsShippingEnabled,
-                isHidingStepNumbers: removeStepNumbersFlag,
                 isSubscribed: defaultNewsletterSignupOption,
             });
 
@@ -288,7 +284,7 @@ class Checkout extends Component<
     }
 
     render(): ReactNode {
-        const { error, isHidingStepNumbers } = this.state;
+        const { error } = this.state;
         let errorModal = null;
 
         if (error) {
@@ -306,7 +302,7 @@ class Checkout extends Component<
         }
 
         return (
-            <div className={classNames({ 'is-embedded': isEmbedded(), 'remove-checkout-step-numbers': isHidingStepNumbers })} data-test="checkout-page-container" id="checkout-page-container">
+            <div className={classNames('remove-checkout-step-numbers', { 'is-embedded': isEmbedded() })} data-test="checkout-page-container" id="checkout-page-container">
                 <div className="layout optimizedCheckout-contentPrimary">
                     {this.renderContent()}
                 </div>
@@ -428,7 +424,7 @@ class Checkout extends Component<
     }
 
     private renderShippingStep(step: CheckoutStepStatus): ReactNode {
-        const { hasCartChanged, cart, consignments = [] } = this.props;
+        const { hasCartChanged, cart, consignments = [], isNewMultiShippingUIEnabled } = this.props;
 
         const { isBillingSameAsShipping, isMultiShippingMode } = this.state;
 
@@ -443,15 +439,7 @@ class Checkout extends Component<
                 key={step.type}
                 onEdit={this.handleEditStep}
                 onExpanded={this.handleExpanded}
-                summary={consignments.map((consignment) => (
-                    <div className="staticConsignmentContainer" key={consignment.id}>
-                        <StaticConsignment
-                            cart={cart}
-                            compactView={consignments.length < 2}
-                            consignment={consignment}
-                        />
-                    </div>
-                ))}
+                summary={<ShippingSummary cart={cart} consignments={consignments} isMultiShippingMode={isMultiShippingMode} isNewMultiShippingUIEnabled={isNewMultiShippingUIEnabled} />}
             >
                 <LazyContainer loadingSkeleton={<AddressFormSkeleton />}>
                     <Shipping
@@ -528,13 +516,16 @@ class Checkout extends Component<
     }
 
     private renderCartSummary(): ReactNode {
+        const { isMultiShippingMode } = this.state;
+
         return (
             <MobileView>
                 {(matched) => {
                     if (matched) {
                         return (
                             <LazyContainer>
-                                <CartSummaryDrawer />
+                                <Extension region={ExtensionRegion.SummaryAfter} />
+                                <CartSummaryDrawer isMultiShippingMode={isMultiShippingMode} />
                             </LazyContainer>
                         );
                     }
@@ -542,7 +533,8 @@ class Checkout extends Component<
                     return (
                         <aside className="layout-cart">
                             <LazyContainer>
-                                <CartSummary />
+                                <CartSummary isMultiShippingMode={isMultiShippingMode} />
+                                <Extension region={ExtensionRegion.SummaryAfter} />
                             </LazyContainer>
                         </aside>
                     );

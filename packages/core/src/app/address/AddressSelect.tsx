@@ -18,8 +18,10 @@ export interface AddressSelectProps {
     addresses: CustomerAddress[];
     selectedAddress?: Address;
     type: AddressType;
+    showSingleLineAddress?: boolean;
     onSelectAddress(address: Address): void;
     onUseNewAddress(currentAddress?: Address): void;
+    placeholderText?: React.JSX.Element;
 }
 
 const AddressSelectMenu: FunctionComponent<AddressSelectProps> = ({
@@ -46,8 +48,8 @@ const AddressSelectMenu: FunctionComponent<AddressSelectProps> = ({
                 key={address.id}
             >
                 <a
-                    href="#"
                     data-test="address-select-option-action"
+                    href="#"
                     onClick={preventDefault(() => onSelectAddress(address))}
                 >
                     <StaticAddress address={address} type={type} />
@@ -61,8 +63,10 @@ const AddressSelect = ({
     addresses,
     selectedAddress,
     type,
+    showSingleLineAddress,
     onSelectAddress,
     onUseNewAddress,
+    placeholderText,
 }: AddressSelectProps) => {
     const { shouldShowPayPalFastlaneLabel } = usePayPalFastlaneAddress();
 
@@ -92,7 +96,9 @@ const AddressSelect = ({
                 >
                     <AddressSelectButton
                         addresses={addresses}
+                        placeholderText={placeholderText}
                         selectedAddress={selectedAddress}
+                        showSingleLineAddress={showSingleLineAddress}
                         type={type}
                     />
                 </DropdownTrigger>

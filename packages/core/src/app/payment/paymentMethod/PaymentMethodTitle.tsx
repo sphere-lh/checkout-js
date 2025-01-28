@@ -11,13 +11,13 @@ import { connectFormik, ConnectFormikProps } from '../../common/form';
 import { CreditCardIconList, mapFromPaymentMethodCardType } from '../creditCard';
 
 import BraintreePaypalCreditDescription from './BraintreePaypalCreditDescription';
-import PaypalCommerceCreditDescription from './PaypalCommerceCreditDescription';
 import { hasCreditCardNumber } from './CreditCardFieldsetValues';
 import getPaymentMethodDisplayName from './getPaymentMethodDisplayName';
 import getPaymentMethodName from './getPaymentMethodName';
 import { isHostedCreditCardFieldsetValues } from './HostedCreditCardFieldsetValues';
 import PaymentMethodId from './PaymentMethodId';
 import PaymentMethodType from './PaymentMethodType';
+import PaypalCommerceCreditDescription from './PaypalCommerceCreditDescription';
 
 export interface PaymentMethodTitleProps {
     method: PaymentMethod;
@@ -110,10 +110,6 @@ function getPaymentMethodTitle(
             [PaymentMethodId.Bolt]: {
                 logoUrl: '',
                 titleText: methodDisplayName,
-            },
-            [PaymentMethodId.ChasePay]: {
-                logoUrl: cdnPath('/img/payment-providers/chase-pay.png'),
-                titleText: '',
             },
             [PaymentMethodId.Clearpay]: {
                 logoUrl: cdnPath('/img/payment-providers/clearpay-header.png'),
